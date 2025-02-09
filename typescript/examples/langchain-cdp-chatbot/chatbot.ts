@@ -86,14 +86,15 @@ async function initializeAgentKit(): Promise<AgentKit> {
  * Run the trading bot with specified intervals
  *
  * @param interval - Time interval between actions in seconds
+ * @param simulationMode - Whether to run in simulation mode
  */
-async function runTradingBot(interval = 10): Promise<void> {
+async function runTradingBot(interval = 10, simulationMode = false): Promise<void> {
   console.log("Starting trading bot...");
 
   try {
     // Initialize AgentKit and trading bot
     const agentKit = await initializeAgentKit();
-    const tradingBot = new TradingBot(agentKit);
+    const tradingBot = new TradingBot(agentKit, simulationMode);
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -124,7 +125,14 @@ async function runTradingBot(interval = 10): Promise<void> {
 // Start the trading bot
 if (require.main === module) {
   console.log("Starting trading bot...");
-  runTradingBot().catch(error => {
+
+  // Check if simulation mode is enabled
+  const simulationMode = process.argv.includes("--simulation");
+  if (simulationMode) {
+    console.log("Running in simulation mode - no real transactions will be executed");
+  }
+
+  runTradingBot(10, simulationMode).catch(error => {
     console.error("Fatal error:", error);
     process.exit(1);
   });

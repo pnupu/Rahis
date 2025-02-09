@@ -11,6 +11,8 @@ interface TradingState {
   lastBuyPrice: number | null;
   priceHistory: PriceHistory[];
   position: "long" | "neutral";
+  simulatedEthBalance: number; // For simulation mode
+  simulatedUsdcBalance: number; // For simulation mode
 }
 
 /**
@@ -22,12 +24,15 @@ export class TradingBot {
     lastBuyPrice: null,
     priceHistory: [],
     position: "neutral",
+    simulatedEthBalance: 0.0001, // Start with 0.0001 ETH in simulation
+    simulatedUsdcBalance: 0, // Start with 0 USDC in simulation
   };
 
   private readonly PRICE_HISTORY_LENGTH = 10; // Keep last 10 price points
   private readonly PROFIT_THRESHOLD = 0.02; // 2% profit target
   private readonly LOSS_THRESHOLD = 0.01; // 1% stop loss
   private readonly MOVING_AVERAGE_PERIOD = 5; // 5-period moving average
+  private readonly SIMULATION_MODE: boolean;
 
   private tools: StructuredTool[] | null = null;
   private initialized = false;
@@ -36,11 +41,16 @@ export class TradingBot {
    * Creates a new instance of the trading bot
    *
    * @param agentKit - The AgentKit instance to use for blockchain interactions
+   * @param simulationMode - Whether to run in simulation mode (default: false)
    */
-  constructor(private agentKit: AgentKit) {
+  constructor(
+    private agentKit: AgentKit,
+    simulationMode: boolean = false,
+  ) {
+    this.SIMULATION_MODE = simulationMode;
     const actions = agentKit.getActions();
     const tradeAction = actions.find(action => action.name === "CdpWalletActionProvider_trade");
-    if (!tradeAction) {
+    if (!tradeAction && !simulationMode) {
       throw new Error("Trading bot requires CDP wallet trade action");
     }
 
@@ -110,10 +120,14 @@ export class TradingBot {
    */
   private async logBalances(): Promise<void> {
     try {
-      const ethBalance = await this.getEthBalance();
-      const usdcBalance = await this.getUsdcBalance();
+      const ethBalance = this.SIMULATION_MODE
+        ? this.state.simulatedEthBalance
+        : await this.getEthBalance();
+      const usdcBalance = this.SIMULATION_MODE
+        ? this.state.simulatedUsdcBalance
+        : await this.getUsdcBalance();
       console.log("-------------------");
-      console.log("Current balances:");
+      console.log(this.SIMULATION_MODE ? "Simulated balances:" : "Current balances:");
       console.log(`ETH: ${ethBalance.toFixed(6)} ETH`);
       console.log(`USDC: ${usdcBalance.toFixed(2)} USDC`);
       console.log("-------------------");
@@ -128,6 +142,10 @@ export class TradingBot {
    * @returns The current ETH balance in whole units
    */
   private async getEthBalance(): Promise<number> {
+    if (this.SIMULATION_MODE) {
+      return this.state.simulatedEthBalance;
+    }
+
     try {
       const actions = this.agentKit.getActions();
       const walletAction = actions.find(
@@ -156,6 +174,10 @@ export class TradingBot {
    * @returns The current USDC balance
    */
   private async getUsdcBalance(): Promise<number> {
+    if (this.SIMULATION_MODE) {
+      return this.state.simulatedUsdcBalance;
+    }
+
     try {
       const actions = this.agentKit.getActions();
       const balanceAction = actions.find(
@@ -224,6 +246,14 @@ export class TradingBot {
    */
   private async executeBuyOrder(amount: number): Promise<string> {
     try {
+      if (this.SIMULATION_MODE) {
+        const currentPrice = await this.getCurrentPrice("ETH/USD");
+        const usdcAmount = amount * currentPrice;
+        this.state.simulatedEthBalance -= amount;
+        this.state.simulatedUsdcBalance += usdcAmount;
+        return `[SIMULATION] Bought ${amount.toFixed(6)} ETH for ${usdcAmount.toFixed(2)} USDC at price $${currentPrice}`;
+      }
+
       const actions = this.agentKit.getActions();
       const tradeAction = actions.find(action => action.name === "CdpWalletActionProvider_trade");
       if (!tradeAction) {
@@ -250,6 +280,14 @@ export class TradingBot {
    */
   private async executeSellOrder(amount: number): Promise<string> {
     try {
+      if (this.SIMULATION_MODE) {
+        const currentPrice = await this.getCurrentPrice("ETH/USD");
+        const ethAmount = amount / currentPrice;
+        this.state.simulatedUsdcBalance -= amount;
+        this.state.simulatedEthBalance += ethAmount;
+        return `[SIMULATION] Sold ${amount.toFixed(2)} USDC for ${ethAmount.toFixed(6)} ETH at price $${currentPrice}`;
+      }
+
       const actions = this.agentKit.getActions();
       const tradeAction = actions.find(action => action.name === "CdpWalletActionProvider_trade");
       if (!tradeAction) {
