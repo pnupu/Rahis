@@ -1,63 +1,77 @@
-# CDP AgentKit LangChain Extension Examples - Chatbot Typescript
+# CDP AgentKit Trading Bot Example
 
-This example demonstrates an agent setup as a terminal style chatbot with access to the full set of CDP AgentKit actions.
+This example demonstrates a simple trading bot that implements a moving average strategy with profit targets and stop losses on Base Sepolia testnet.
 
-## Ask the chatbot to engage in the Web3 ecosystem!
+## Features
 
-- "Transfer a portion of your ETH to a random address"
-- "What is the price of BTC?"
-- "Deploy an NFT that will go super viral!"
-- "Deploy an ERC-20 token with total supply 1 billion"
+- Monitors ETH/USD price using Pyth Network price feeds
+- Implements a 5-period moving average strategy
+- 2% profit target and 1% stop loss
+- Trades between ETH and USDC
+- Keeps gas buffer for transactions
 
 ## Prerequisites
 
-### Checking Node Version
+- Node.js 18+
+- CDP Secret API Key
+- OpenAI API Key
 
-Before using the example, ensure that you have the correct version of Node.js installed. The example requires Node.js 18 or higher. You can check your Node version by running:
+## Setup
 
-```bash
-node --version
-```
-
-If you don't have the correct version, you can install it using [nvm](https://github.com/nvm-sh/nvm):
-
-```bash
-nvm install node
-```
-
-This will automatically install and use the latest version of Node.
-
-### API Keys
-
-You'll need the following API keys:
-- [CDP API Key](https://portal.cdp.coinbase.com/access/api)
-- [OpenAI API Key](https://platform.openai.com/docs/quickstart#create-and-export-an-api-key)
-
-Once you have them, rename the `.env-local` file to `.env` and make sure you set the API keys to their corresponding environment variables:
-
-- "CDP_API_KEY_NAME"
-- "CDP_API_KEY_PRIVATE_KEY"
-- "OPENAI_API_KEY"
-
-## Running the example
-
-From the root directory, run:
-
+1. Install dependencies:
 ```bash
 npm install
-npm run build
 ```
 
-This will install the dependencies and build the packages locally. The chatbot example uses the local `@coinbase/agentkit-langchain` and `@coinbase/agentkit` packages. If you make changes to the packages, you can run `npm run build` from root again to rebuild the packages, and your changes will be reflected in the chatbot example.
-
-Now from the `typescript/examples/langchain-cdp-chatbot` directory, run:
-
+2. Create a `.env` file with your API keys:
 ```bash
-npm start
+OPENAI_API_KEY=your_openai_api_key
+CDP_API_KEY_NAME=your_cdp_api_key_name
+CDP_API_KEY_PRIVATE_KEY=your_cdp_api_key_private_key
 ```
 
-Select "1. chat mode" and start telling your Agent to do things onchain!
+3. Make sure you have some testnet ETH in your wallet (at least 0.0001 ETH recommended)
 
-## License
+## Running the Bot
 
-Apache-2.0
+Start the trading bot:
+```bash
+npm run start
+```
+
+The bot will:
+1. Display current ETH and USDC balances
+2. Monitor ETH/USD price
+3. Execute trades based on the moving average strategy
+4. Show profit/loss for each trade
+
+## Trading Strategy
+
+The bot uses a simple moving average strategy:
+- Buy when price drops below the 5-period moving average (potential uptrend)
+- Sell when either:
+  - 2% profit target is hit
+  - 1% stop loss is triggered
+
+Trade sizes:
+- Buy orders: 0.00005 ETH (plus 0.00002 ETH gas buffer)
+- Sell orders: 0.1 USDC
+
+## Contract Addresses
+
+- USDC on Base Sepolia: `0x876852425331a113d8E432eFFB3aC5BEf38f033a`
+
+## Important Notes
+
+- This is a testnet example - do not use on mainnet
+- Keep enough ETH for gas fees (minimum 0.00002 ETH recommended)
+- The bot will log all balances and trades for monitoring
+- Error handling is implemented for common issues
+
+## Troubleshooting
+
+If you encounter issues:
+1. Check your wallet has sufficient testnet ETH
+2. Verify the USDC contract address is correct
+3. Make sure all API keys are properly set
+4. Check the Base Sepolia network status
